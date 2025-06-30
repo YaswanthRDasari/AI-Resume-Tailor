@@ -1,6 +1,8 @@
-
 fastapi
 uvicorn
-spacy
-openai
+pydantic
 python-dotenv
+openai
+spacy
+pypdf
+python-multipart
