@@ -2,7 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 
 function App() {
-  const [resume, setResume] = useState('')
+  const [resumeFile, setResumeFile] = useState(null)
   const [jobDesc, setJobDesc] = useState('')
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -12,10 +12,22 @@ function App() {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    if (!resumeFile) {
+      setError('Please upload a resume.')
+      setLoading(false)
+      return
+    }
+
     try {
-      const res = await axios.post('http://localhost:8000/tailor', {
-        resume_text: resume,
-        job_description: jobDesc
+      const formData = new FormData()
+      formData.append('resume_file', resumeFile)
+      formData.append('job_description', jobDesc)
+
+      const res = await axios.post('http://localhost:8000/tailor', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       })
       setResults(res.data)
     } catch (err) {
@@ -29,13 +41,13 @@ function App() {
     <div style={{ padding: "2rem", maxWidth: "800px", margin: "auto", fontFamily: "sans-serif" }}>
       <h1>📝 AI-Powered Resume Tailoring Assistant</h1>
       <form onSubmit={handleSubmit}>
-        <h3>Resume</h3>
-        <textarea
-          placeholder="Paste your resume here"
-          rows="8"
+        <h3>Upload Resume (PDF)</h3>
+        <input
+          type="file"
+          accept=".pdf"
           style={{ width: "100%", marginBottom: "1rem" }}
-          onChange={(e)=>setResume(e.target.value)}
-        ></textarea>
+          onChange={(e) => setResumeFile(e.target.files[0])}
+        />
         <h3>Job Description</h3>
         <textarea
           placeholder="Paste job description here"
