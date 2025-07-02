@@ -7,6 +7,8 @@ function App() {
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [latexContent, setLatexContent] = useState(null)
+  const [latexFilename, setLatexFilename] = useState('tailored_resume.tex')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -30,6 +32,12 @@ function App() {
         }
       })
       setResults(res.data)
+      if (res.data.latex_content) {
+        setLatexContent(res.data.latex_content)
+        setLatexFilename(res.data.latex_filename || 'tailored_resume.tex')
+      } else {
+        setLatexContent(null)
+      }
     } catch (err) {
       console.error(err)
       setError('Something went wrong. Is your backend running?')
@@ -41,10 +49,10 @@ function App() {
     <div style={{ padding: "2rem", maxWidth: "800px", margin: "auto", fontFamily: "sans-serif" }}>
       <h1>📝 AI-Powered Resume Tailoring Assistant</h1>
       <form onSubmit={handleSubmit}>
-        <h3>Upload Resume (PDF)</h3>
+        <h3>Upload Resume (PDF or LaTeX .tex)</h3>
         <input
           type="file"
-          accept=".pdf"
+          accept=".pdf,.tex"
           style={{ width: "100%", marginBottom: "1rem" }}
           onChange={(e) => setResumeFile(e.target.files[0])}
         />
@@ -64,13 +72,32 @@ function App() {
       {results && (
         <div style={{ marginTop: "2rem" }}>
           <h3>Matched Skills</h3>
-          <ul>{results.matched_skills.map((skill, i) => <li key={i}>{skill}</li>)}</ul>
+          <ul>{results.matched_skills && results.matched_skills.map((skill, i) => <li key={i}>{skill}</li>)}</ul>
 
           <h3>Missing Skills</h3>
-          <ul>{results.missing_skills.map((skill, i) => <li key={i}>{skill}</li>)}</ul>
+          <ul>{results.missing_skills && results.missing_skills.map((skill, i) => <li key={i}>{skill}</li>)}</ul>
 
           <h3>AI Suggestions</h3>
           <pre style={{ background: "#f4f4f4", padding: "1rem" }}>{results.suggestions}</pre>
+
+          {latexContent && (
+            <div style={{ marginTop: "2rem" }}>
+              <h3>Tailored LaTeX Resume</h3>
+              <pre style={{ background: "#272822", color: "#f8f8f2", padding: "1rem", overflowX: "auto" }}>{latexContent}</pre>
+              <button
+                style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}
+                onClick={() => {
+                  const blob = new Blob([latexContent], { type: 'text/x-tex' })
+                  const link = document.createElement('a')
+                  link.href = URL.createObjectURL(blob)
+                  link.download = latexFilename
+                  link.click()
+                }}
+              >
+                Download Tailored LaTeX
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

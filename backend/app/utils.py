@@ -39,3 +39,20 @@ def extract_text_from_pdf(file_stream):
     for page in reader.pages:
         text += page.extract_text()
     return text
+
+def extract_text_from_latex(file_stream):
+    """
+    Extracts plain text from a LaTeX file stream by removing LaTeX commands.
+    """
+    import re
+    file_stream.seek(0)
+    latex_content = file_stream.read().decode('utf-8')
+    # Remove LaTeX comments
+    latex_content = re.sub(r'%.*', '', latex_content)
+    # Remove LaTeX commands
+    text = re.sub(r'\\[a-zA-Z]+(\[[^\]]*\])?(\{[^\}]*\})?', '', latex_content)
+    # Remove curly braces
+    text = re.sub(r'[{}]', '', text)
+    # Collapse multiple spaces/newlines
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()

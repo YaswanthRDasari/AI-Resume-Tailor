@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from app.tailoring import process_resume
-from app.utils import extract_text_from_pdf
+from app.utils import extract_text_from_pdf, extract_text_from_latex
 
 app = FastAPI()
 
@@ -25,5 +25,11 @@ def tailor_resume(
 ):
     # SpooledTemporaryFile needs to be seeked to 0 before reading
     resume_file.file.seek(0)
-    resume_text = extract_text_from_pdf(resume_file.file)
+    filename = resume_file.filename.lower()
+    if filename.endswith('.pdf'):
+        resume_text = extract_text_from_pdf(resume_file.file)
+    elif filename.endswith('.tex'):
+        resume_text = extract_text_from_latex(resume_file.file)
+    else:
+        return {"error": "Unsupported file type. Please upload a PDF or LaTeX (.tex) file."}
     return process_resume(resume_text, job_description)
