@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import { Layout, Card, Steps, Upload, Input, Button, Typography, message, List, Spin } from 'antd'
-import { UploadOutlined, FileTextOutlined, DownloadOutlined, FilePdfOutlined } from '@ant-design/icons'
-import logo from './logo.svg'
+import { UploadOutlined, FileTextOutlined, DownloadOutlined, FilePdfOutlined, RocketTwoTone } from '@ant-design/icons'
 import 'antd/dist/reset.css'
 
 const { Header, Content, Footer } = Layout
@@ -76,10 +75,10 @@ function App() {
   return (
     <Layout style={{ minHeight: '100vh', background: 'linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%)' }}>
       <Header style={{ background: 'white', boxShadow: '0 2px 8px #f0f1f2', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <img src={logo} alt="AI Resume Tailor Logo" style={{ width: 48, height: 48, marginRight: 16 }} />
+        <RocketTwoTone twoToneColor="#4f8cff" style={{ fontSize: 48, marginRight: 16, filter: 'drop-shadow(0 2px 8px #4f8cff33)' }} />
         <div>
           <Title level={3} style={{ margin: 0 }}>AI Resume Tailor</Title>
-          <Paragraph style={{ margin: 0, color: '#4f8cff' }}>Tailor your LaTeX resume to any job description in seconds</Paragraph>
+          <Paragraph style={{ margin: 0, color: '#4f8cff' }}>Tailor your resume to any job description in seconds</Paragraph>
         </div>
       </Header>
       <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '80vh', padding: '40px 16px 0 16px' }}>
