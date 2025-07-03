@@ -1,35 +1,44 @@
 import { useState } from 'react'
 import axios from 'axios'
+import { Layout, Card, Steps, Upload, Input, Button, Typography, message, List, Spin } from 'antd'
+import { UploadOutlined, FileTextOutlined, DownloadOutlined, FilePdfOutlined } from '@ant-design/icons'
+import logo from './logo.svg'
+import 'antd/dist/reset.css'
+
+const { Header, Content, Footer } = Layout
+const { Title, Paragraph } = Typography
+const { Step } = Steps
+const { TextArea } = Input
 
 function App() {
   const [resumeFile, setResumeFile] = useState(null)
   const [jobDesc, setJobDesc] = useState('')
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
   const [latexContent, setLatexContent] = useState(null)
   const [latexFilename, setLatexFilename] = useState('tailored_resume.tex')
+  const [pdfLoading, setPdfLoading] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+  const handleUpload = (info) => {
+    const fileObj = info.fileList && info.fileList[0]?.originFileObj;
+    setResumeFile(fileObj || null);
+    console.log('File selected:', fileObj);
+  }
 
+  const handleSubmit = async () => {
+    console.log('Submit clicked', resumeFile, jobDesc);
     if (!resumeFile) {
-      setError('Please upload a resume.')
-      setLoading(false)
+      message.error('Please upload a resume.')
       return
     }
-
+    setLoading(true)
+    setResults(null)
     try {
       const formData = new FormData()
       formData.append('resume_file', resumeFile)
       formData.append('job_description', jobDesc)
-
       const res = await axios.post('http://localhost:8000/tailor', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       })
       setResults(res.data)
       if (res.data.latex_content) {
@@ -39,68 +48,123 @@ function App() {
         setLatexContent(null)
       }
     } catch (err) {
-      console.error(err)
-      setError('Something went wrong. Is your backend running?')
+      message.error('Something went wrong. Is your backend running?')
     }
     setLoading(false)
   }
 
+  const handleDownloadPDF = async () => {
+    if (!latexContent) return;
+    setPdfLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('latex_code', latexContent);
+      const res = await axios.post('http://localhost:8000/latex-to-pdf', formData, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'tailored_resume.pdf';
+      link.click();
+    } catch (err) {
+      message.error('Failed to generate PDF.');
+    }
+    setPdfLoading(false);
+  };
+
   return (
-    <div style={{ padding: "2rem", maxWidth: "800px", margin: "auto", fontFamily: "sans-serif" }}>
-      <h1>📝 AI-Powered Resume Tailoring Assistant</h1>
-      <form onSubmit={handleSubmit}>
-        <h3>Upload Resume (PDF or LaTeX .tex)</h3>
-        <input
-          type="file"
-          accept=".pdf,.tex"
-          style={{ width: "100%", marginBottom: "1rem" }}
-          onChange={(e) => setResumeFile(e.target.files[0])}
-        />
-        <h3>Job Description</h3>
-        <textarea
-          placeholder="Paste job description here"
-          rows="8"
-          style={{ width: "100%", marginBottom: "1rem" }}
-          onChange={(e)=>setJobDesc(e.target.value)}
-        ></textarea>
-        <button type="submit" style={{ padding: "0.5rem 1rem" }}>Tailor My Resume</button>
-      </form>
-
-      {loading && <p>Generating tailored suggestions...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {results && (
-        <div style={{ marginTop: "2rem" }}>
-          <h3>Matched Skills</h3>
-          <ul>{results.matched_skills && results.matched_skills.map((skill, i) => <li key={i}>{skill}</li>)}</ul>
-
-          <h3>Missing Skills</h3>
-          <ul>{results.missing_skills && results.missing_skills.map((skill, i) => <li key={i}>{skill}</li>)}</ul>
-
-          <h3>AI Suggestions</h3>
-          <pre style={{ background: "#f4f4f4", padding: "1rem" }}>{results.suggestions}</pre>
-
-          {latexContent && (
-            <div style={{ marginTop: "2rem" }}>
-              <h3>Tailored LaTeX Resume</h3>
-              <pre style={{ background: "#272822", color: "#f8f8f2", padding: "1rem", overflowX: "auto" }}>{latexContent}</pre>
-              <button
-                style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}
-                onClick={() => {
-                  const blob = new Blob([latexContent], { type: 'text/x-tex' })
-                  const link = document.createElement('a')
-                  link.href = URL.createObjectURL(blob)
-                  link.download = latexFilename
-                  link.click()
-                }}
-              >
-                Download Tailored LaTeX
-              </button>
+    <Layout style={{ minHeight: '100vh', background: 'linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%)' }}>
+      <Header style={{ background: 'white', boxShadow: '0 2px 8px #f0f1f2', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <img src={logo} alt="AI Resume Tailor Logo" style={{ width: 48, height: 48, marginRight: 16 }} />
+        <div>
+          <Title level={3} style={{ margin: 0 }}>AI Resume Tailor</Title>
+          <Paragraph style={{ margin: 0, color: '#4f8cff' }}>Tailor your LaTeX resume to any job description in seconds</Paragraph>
+        </div>
+      </Header>
+      <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '80vh', padding: '40px 16px 0 16px' }}>
+        <Card style={{ maxWidth: 600, width: '100%', borderRadius: 16, boxShadow: '0 8px 32px rgba(60, 72, 100, 0.12)' }}>
+          <Steps current={latexContent ? 2 : (resumeFile ? 1 : 0)} style={{ marginBottom: 32 }}>
+            <Step title="Upload Resume" icon={<UploadOutlined />} />
+            <Step title="Paste JD" icon={<FileTextOutlined />} />
+            <Step title="Get Result" icon={<DownloadOutlined />} />
+          </Steps>
+          <div>
+            <Upload.Dragger
+              name="resume_file"
+              accept=".pdf,.tex"
+              beforeUpload={() => false}
+              maxCount={1}
+              onChange={handleUpload}
+              style={{ marginBottom: 24 }}
+            >
+              <p className="ant-upload-drag-icon"><UploadOutlined /></p>
+              <p className="ant-upload-text">Click or drag PDF/LaTeX file to this area to upload</p>
+            </Upload.Dragger>
+            <TextArea
+              rows={6}
+              placeholder="Paste job description here"
+              value={jobDesc}
+              onChange={e => setJobDesc(e.target.value)}
+              style={{ marginBottom: 24, borderRadius: 8 }}
+            />
+            <Button
+              type="primary"
+              size="large"
+              block
+              loading={loading}
+              style={{ borderRadius: 8 }}
+              onClick={handleSubmit}
+              disabled={!resumeFile}
+            >
+              Tailor My Resume
+            </Button>
+          </div>
+          {loading && <div style={{ textAlign: 'center', margin: '2rem 0' }}><Spin size="large" /></div>}
+          {results && latexContent && (
+            <div style={{ marginTop: 32 }}>
+              <Title level={4}>Tailored LaTeX Resume</Title>
+              <Input.TextArea
+                value={latexContent}
+                rows={12}
+                readOnly
+                style={{ background: '#23272e', color: '#f8f8f2', fontFamily: 'monospace', borderRadius: 8, marginBottom: 16 }}
+              />
+              <div style={{ display: 'flex', gap: 12 }}>
+                <Button
+                  icon={<DownloadOutlined />}
+                  type="default"
+                  size="large"
+                  style={{ borderRadius: 8, flex: 1 }}
+                  onClick={() => {
+                    const blob = new Blob([latexContent], { type: 'text/x-tex' })
+                    const link = document.createElement('a')
+                    link.href = URL.createObjectURL(blob)
+                    link.download = latexFilename
+                    link.click()
+                  }}
+                >
+                  Download Tailored LaTeX
+                </Button>
+                <Button
+                  icon={<FilePdfOutlined />}
+                  type="primary"
+                  size="large"
+                  style={{ borderRadius: 8, flex: 1 }}
+                  loading={pdfLoading}
+                  onClick={handleDownloadPDF}
+                >
+                  Download PDF
+                </Button>
+              </div>
             </div>
           )}
-        </div>
-      )}
-    </div>
+        </Card>
+      </Content>
+      <Footer style={{ textAlign: 'center', color: '#7b8794', background: 'none', fontSize: 16 }}>
+        Made with ❤️ for job seekers | By Yaswanth Reddy Dasari
+      </Footer>
+    </Layout>
   )
 }
 

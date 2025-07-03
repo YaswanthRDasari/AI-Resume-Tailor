@@ -1,7 +1,10 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.tailoring import process_resume
 from app.utils import extract_text_from_pdf, extract_text_from_latex
+import tempfile
+import subprocess
+import os
 
 app = FastAPI()
 
@@ -33,3 +36,25 @@ def tailor_resume(
     else:
         return {"error": "Unsupported file type. Please upload a PDF or LaTeX (.tex) file."}
     return process_resume(resume_text, job_description)
+
+@app.post("/latex-to-pdf")
+def latex_to_pdf(latex_code: str = Form(...)):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tex_path = os.path.join(tmpdir, "resume.tex")
+        pdf_path = os.path.join(tmpdir, "resume.pdf")
+        # Write LaTeX code to .tex file
+        with open(tex_path, "w", encoding="utf-8") as f:
+            f.write(latex_code)
+        # Run pdflatex to generate PDF
+        try:
+            subprocess.run([
+                "pdflatex", "-interaction=nonstopmode", "-output-directory", tmpdir, tex_path
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            return {"error": "Failed to compile LaTeX to PDF.", "details": e.stderr.decode("utf-8")}
+        # Read PDF and return as response
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+        return Response(pdf_bytes, media_type="application/pdf", headers={
+            "Content-Disposition": "attachment; filename=tailored_resume.pdf"
+        })
