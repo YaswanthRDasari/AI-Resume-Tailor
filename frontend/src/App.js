@@ -211,9 +211,12 @@ function App() {
       const formData = new FormData();
       formData.append('resume_file', resumeFile);
       formData.append('job_description', jobDesc);
+      console.log('Sending request to backend...');
       const res = await axios.post('http://localhost:8000/tailor', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      console.log('Backend response:', res.data);
+      console.log('Response keys:', Object.keys(res.data));
       setResults(res.data);
       if (res.data.latex_content) {
         setLatexContent(res.data.latex_content);
@@ -222,6 +225,8 @@ function App() {
         setLatexContent(null);
       }
     } catch (err) {
+      console.error('Frontend error:', err);
+      console.error('Error response:', err.response);
       const errorMsg = err.response?.data?.error || 'Something went wrong. Is your backend running?';
       message.error(errorMsg);
     }
