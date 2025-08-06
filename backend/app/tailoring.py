@@ -91,18 +91,28 @@ def process_resume(resume_text: str, job_description: str):
     """
     Anonymizes resume, tailors it using AI, and then de-anonymizes the result.
     """
-    # 1. Anonymize the resume text to protect PII
-    anonymized_resume, anonymization_map = anonymize_text(resume_text)
-    
-    # Extract keywords for skill analysis
-    resume_keywords_set = set(extract_keywords(resume_text))
-    job_keywords_set = set(extract_keywords(job_description))
+    try:
+        print(f"[DEBUG] Starting process_resume with resume length: {len(resume_text)}")
+        
+        # 1. Anonymize the resume text to protect PII
+        anonymized_resume, anonymization_map = anonymize_text(resume_text)
+        print(f"[DEBUG] Anonymized resume length: {len(anonymized_resume)}")
+        
+        # Extract keywords for skill analysis
+        resume_keywords_set = set(extract_keywords(resume_text))
+        job_keywords_set = set(extract_keywords(job_description))
+        
+        print(f"[DEBUG] Resume keywords count: {len(resume_keywords_set)}")
+        print(f"[DEBUG] Job keywords count: {len(job_keywords_set)}")
 
-    matched_skills = list(resume_keywords_set & job_keywords_set)
-    missing_skills = list(job_keywords_set - resume_keywords_set)
-    
-    # 2. Update the prompt to instruct the AI to preserve placeholders
-    prompt = f"""
+        matched_skills = list(resume_keywords_set & job_keywords_set)
+        missing_skills = list(job_keywords_set - resume_keywords_set)
+        
+        print(f"[DEBUG] Matched skills: {matched_skills}")
+        print(f"[DEBUG] Missing skills: {missing_skills}")
+        
+        # 2. Update the prompt to instruct the AI to preserve placeholders
+        prompt = f"""
 Given the following anonymized LaTeX resume content:
 {anonymized_resume}
 
@@ -121,14 +131,32 @@ and this job description:
 - Only use valid LaTeX commands and content relevant to a professional resume.
 """
 
-    anonymized_latex_result = call_gpt(prompt)
+        print(f"[DEBUG] Calling GPT with prompt length: {len(prompt)}")
+        anonymized_latex_result = call_gpt(prompt)
+        print(f"[DEBUG] GPT response length: {len(anonymized_latex_result) if anonymized_latex_result else 0}")
 
-    # 3. De-anonymize the AI's response to restore the original PII
-    tailored_latex = de_anonymize_text(anonymized_latex_result, anonymization_map)
+        # 3. De-anonymize the AI's response to restore the original PII
+        tailored_latex = de_anonymize_text(anonymized_latex_result, anonymization_map)
+        print(f"[DEBUG] Final tailored latex length: {len(tailored_latex)}")
 
-    return {
-        "matched_skills": matched_skills,
-        "missing_skills": missing_skills,
-        "latex_content": tailored_latex,
-        "latex_filename": "tailored_resume.tex"
-    }
+        result = {
+            "matched_skills": matched_skills,
+            "missing_skills": missing_skills,
+            "latex_content": tailored_latex,
+            "latex_filename": "tailored_resume.tex"
+        }
+        
+        print(f"[DEBUG] Returning result with keys: {list(result.keys())}")
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in process_resume: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "error": f"Processing failed: {str(e)}",
+            "matched_skills": [],
+            "missing_skills": [],
+            "latex_content": "",
+            "latex_filename": "error.tex"
+        }
