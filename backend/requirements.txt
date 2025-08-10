@@ -7,3 +7,5 @@ spacy>=3.7.0
 pypdf>=3.17.0
 python-multipart>=0.0.6
 typing-extensions>=4.8.0
+spacy
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
