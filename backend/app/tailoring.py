@@ -225,6 +225,11 @@ def calculate_skill_match_score(resume_skills: List[str], job_skills: List[str],
 
 def calculate_experience_score(resume_years: int, required_years: int) -> float:
     """Calculate experience match score"""
+    # Handle None values gracefully
+    if required_years is None:
+        required_years = 0
+    if resume_years is None:
+        resume_years = 0
     if required_years == 0:
         return 0.8  # Default score if no requirement specified
     
@@ -535,7 +540,88 @@ def process_resume(resume_text: str, job_description: str, target_match_percenta
         job_skills = normalize_skills(job_skills)
         # 3. Calculate match score and recommendation
         match_analysis = calculate_match_score(resume_text, job_description, resume_skills, job_skills)
-        # 4. Generate LaTeX resume using LLM
+        # 4. Generate ATS-optimized structured resume using LLM
+        ats_prompt = f"""
+You are an expert resume writer and ATS optimization specialist.
+
+Given:
+- STRUCTURED RESUME DATA: {resume_fields}
+- JOB DESCRIPTION: {job_description}
+
+Your tasks:
+1. **Skills Section:**
+   - Ensure the skills section includes all relevant skills from the job description that the candidate genuinely possesses, based on their experience, education, or projects.
+   - Do NOT add skills that are not supported by the candidate’s background.
+
+2. **Project & Experience Descriptions:**
+   - Rewrite project and experience bullet points to naturally incorporate keywords and phrases from the job description, but only where they truthfully reflect the candidate’s actual work.
+   - Emphasize achievements and responsibilities that align with the job’s requirements.
+   - Avoid exaggeration or making unrealistic claims.
+
+3. **ATS Optimization:**
+   - Use exact keywords and terminology from the job description where appropriate, especially for skills, technologies, and methodologies.
+   - Maintain a professional, concise, and truthful tone.
+
+4. **No Hallucination:**
+   - Do NOT invent experience, skills, or qualifications that are not present in the candidate’s background.
+
+CRITICAL:
+- You MUST preserve all original personal information (name, email, phone, location, education, etc.) exactly as provided in the structured resume data.
+- Only rewrite the skills, experience, and project descriptions for ATS optimization.
+- Do NOT invent, change, or omit the candidate’s identity or contact details.
+- Do NOT generate a sample or template resume—always use the real candidate’s data.
+
+5. **Output:**
+   - Return a JSON object with the following structure:
+     {{
+       "name": ...,
+       "email": ...,
+       "phone": ...,
+       "location": ...,
+       "summary": ...,
+       "skills": [...],  // Optimized for ATS, truthful
+       "experience": [
+         {{
+           "company": ...,
+           "title": ...,
+           "start": ...,
+           "end": ...,
+           "bullets": [
+             // Each bullet rewritten to maximize ATS match, using job description keywords where truthful
+           ]
+         }},
+         ...
+       ],
+       "education": [...],
+       "projects": [
+         {{
+           "name": ...,
+           "description": "...", // Rewritten to include relevant job keywords, if truthful
+         }},
+         ...
+       ]
+     }}
+
+CRITICAL:
+- Do not add or exaggerate skills or experience.
+- Only use keywords from the job description if they are genuinely supported by the candidate’s background.
+- The goal is to maximize ATS keyword match while remaining 100% truthful.
+
+STRUCTURED RESUME DATA:
+{resume_fields}
+
+JOB DESCRIPTION:
+{job_description}
+"""
+        ats_structured_resume = call_gpt(ats_prompt)
+        import json
+        try:
+            ats_resume_fields = json.loads(ats_structured_resume) if isinstance(ats_structured_resume, str) else ats_structured_resume
+        except Exception as e:
+            print(f"[ERROR] Failed to parse ATS-optimized resume JSON: {str(e)}")
+            ats_resume_fields = resume_fields
+
+        # Now generate LaTeX from the optimized structured resume
         prompt = f"""
 You are a professional resume writer. Given the following structured resume data and job description, generate a complete, professional LaTeX resume. Use this structure:
 - Name (large, bold at top)
@@ -547,7 +633,7 @@ You are a professional resume writer. Given the following structured resume data
 - Projects (if present)
 
 STRUCTURED RESUME DATA:
-{resume_fields}
+{{ats_resume_fields}}
 
 JOB DESCRIPTION:
 {job_description}
